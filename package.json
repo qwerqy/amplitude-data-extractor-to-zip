@@ -9,6 +9,9 @@
   "author": "Amin Roslan",
   "license": "ISC",
   "dependencies": {
-    "request": "^2.88.0"
+    "dotenv": "^6.2.0",
+    "request": "^2.88.0",
+    "unzip": "^0.1.11",
+    "unzipper": "^0.9.11"
   }
 }
