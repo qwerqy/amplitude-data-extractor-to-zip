@@ -83,8 +83,6 @@ class Scraper {
                   e.event_type === "Survey complete"
               );
               if (selectedEvents.length > 0) {
-                // console.log(`${selectedEvents.length} events in ${start}`);
-                // console.log(selectedEvents);
                 mongo.connect(
                   url,
                   { useNewUrlParser: true },
@@ -110,6 +108,109 @@ class Scraper {
           console.log(`No data found, proceeding..`);
         });
     }
+  }
+
+  parseDataForResponseTime() {
+    mongo.connect(url, { useNewUrlParser: true }, async (err, client) => {
+      if (err) throw new Error(err);
+      console.log("Connected correctly to server");
+      const dataDb = client.db("data");
+      const rawDb = await dataDb.collection("rawData");
+      await dataDb.collection("parsedData");
+      const pipeline = [
+        {
+          $group: {
+            _id: {
+              refcode: "$user_id",
+              cid: "$event_properties.cid"
+            },
+            events: {
+              $push: {
+                event_type: "$event_type",
+                event_time: {
+                  $dateFromString: {
+                    dateString: "$event_time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          $project: {
+            _id: 1.0,
+            survey_sent: {
+              $filter: {
+                input: "$events",
+                as: "event",
+                cond: {
+                  $eq: ["$$event.event_type", "Survey sent"]
+                }
+              }
+            },
+            survey_complete: {
+              $filter: {
+                input: "$events",
+                as: "event",
+                cond: {
+                  $eq: ["$$event.event_type", "Survey complete"]
+                }
+              }
+            },
+            survey_disqualified: {
+              $filter: {
+                input: "$events",
+                as: "event",
+                cond: {
+                  $eq: ["$$event.event_type", "Survey disqualified"]
+                }
+              }
+            }
+          }
+        },
+        {
+          $project: {
+            _id: 1.0,
+            survey_sent: {
+              $max: "$survey_sent.event_time"
+            },
+            survey_complete: {
+              $max: "$survey_complete.event_time"
+            },
+            survey_disqualified: {
+              $max: "$survey_disqualified.event_time"
+            }
+          }
+        },
+        {
+          $project: {
+            _id: 1.0,
+            response_time: {
+              $subtract: [
+                {
+                  $ifNull: ["$survey_complete", "$survey_disqualified"]
+                },
+                "$survey_sent"
+              ]
+            }
+          }
+        },
+        {
+          $out: "parsedData"
+        }
+      ];
+
+      const cursor = rawDb.aggregate(pipeline);
+      cursor.forEach(
+        function(doc) {
+          console.log(doc);
+        },
+        function(err) {
+          client.close();
+        }
+      );
+      client.close();
+    });
   }
 }
 
@@ -175,14 +276,8 @@ const period = [
   }
 ];
 
-Object.keys(period).map(i => {
-  scraper.extractData(period[i].start, period[i].end);
-});
-//   function() {
-//   console.log("done");
-//   fs.readdir("./data", (err, files) => {
-//     files.forEach(file => {
-//       console.log(file);
-//     });
-//   });
+// Object.keys(period).map(i => {
+//   scraper.extractData(period[i].start, period[i].end);
 // });
+
+scraper.parseDataForResponseTime();
