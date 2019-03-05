@@ -4,7 +4,8 @@
   "description": "A script to fetch data from Vase.ai amplitude account",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "extract": "npx babel-node src/extract.js",
+    "parse": "npx babel-node src/parse.js"
   },
   "author": "Amin Roslan",
   "license": "ISC",
@@ -13,5 +14,11 @@
     "mongodb": "^3.1.13",
     "request": "^2.88.0",
     "unzipper": "^0.9.11"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.2.3",
+    "@babel/core": "^7.3.4",
+    "@babel/node": "^7.2.2",
+    "@babel/preset-env": "^7.3.4"
   }
 }
